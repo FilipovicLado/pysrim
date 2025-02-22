@@ -1,4 +1,4 @@
-# SRIM & pysrim Installation Guide
+# Parallelized SRIM & pysrim Installation Guide
 
 This document provides a streamlined installation guide for SRIM and `pysrim`, now fully integrated into `pip install .` for easier setup.
 
@@ -29,22 +29,22 @@ The installation process will:
      However, if all dependencies are already installed, nothing is required.
 
 2. **Installing pysrim**  
-   - `pysrim` is installed automatically when running `pip install .`  
+   - `pysrim` is installed automatically in the `build` subfolder when running `pip install .`  
 
-3. **Downloading and Extracting SRIM**  
-   - The installer downloads the SRIM package from the official website.  
+3. **Extracting and Downloading SRIM**  
+   - The installer will use the SRIM package from the `assets` subfolder.
+   - If `assets` is not available or the package does not exist, it downloads the SRIM package from the official website.  
      ```bash
      wget http://www.srim.org/SRIM/SRIM-2013-Pro.e
      ```  
    - It extracts the files into the `srim_install` subdirectory using `7z`.  
      ```bash
-     mv SRIM-2013-Pro.e SRIM-2013-Pro.exe
-     7z x SRIM-2013-Pro.exe -osrim_install
+     7z x SRIM-2013-Pro.e -osrim_install
      ```  
 
 4. **Installing Visual Basic 5 Runtime**  
    - SRIM requires the Visual Basic 5 runtime to function.  
-   - This can be installed automatically using:
+   - This is installed automatically using:
      ```bash
      winetricks vb5run
      ```  
@@ -72,14 +72,13 @@ This ensures that the entire installation process is automated while minimizing 
 
 ## What's New in This Fork
 
-This fork of `pysrim` includes enhanced functionality for parallelizing fragmented TRIM calculations by allowing multiple instances of `TRIM.exe` to run concurrently. This is achieved through:
-
-- Creating unique process-specific directories for each TRIM execution using a `unique_id`.
-- Copying necessary files to isolated directories to ensure execution is independent.
+This fork of `pysrim` includes functionality for parallelizing fragmented TRIM calculations by allowing multiple instances of `TRIM.exe` to run concurrently. This is achieved by:
+- Creating unique process-specific directories in `/tmp/` for each TRIM execution using a `unique_id`.
+- Copying necessary files to these directories to ensure execution and generated results files are independent.
 - Running multiple instances of `TRIM.exe` in parallel without conflicts.
 - Automatically managing temporary output directories for parallel execution.
 
-Additionally, an **example Jupyter Notebook has been introduced** to demonstrate parallelization. The Al doping of SiC simulation is available in two versions:
+Additionally, an example Jupyter Notebook has been introduced to demonstrate parallelization. The Al doping of SiC simulation is available in two versions:
 - **Serial Execution**: `SiC_Al.ipynb`
 - **Parallel Execution**: `SiC_Al_parallel.ipynb`
 

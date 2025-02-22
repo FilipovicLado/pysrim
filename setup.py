@@ -44,27 +44,27 @@ class CustomInstallCommand(install):
 
         # Define SRIM installation
         srim_url = "http://www.srim.org/SRIM/SRIM-2013-Pro.e"
-        srim_exe = "SRIM-2013-Pro.exe"
+        assets_dir = os.path.join(os.getcwd(), "assets")
+        srim_e_file = os.path.join(assets_dir, "SRIM-2013-Pro.e")
         srim_dir = os.path.join(os.getcwd(), "srim_install")
 
         os.makedirs(srim_dir, exist_ok=True)
+        # os.makedirs(assets_dir, exist_ok=True)
 
-        # Download SRIM
-        if not os.path.exists(srim_exe):
-            print("Downloading SRIM...")
-            subprocess.run(["wget", srim_url, "-O", srim_exe], check=True)
+        # Check if the SRIM installer is already available in the assets folder
+        if not os.path.exists(srim_e_file):
+            print("SRIM installer not found in assets folder. Downloading..."); sys.stdout.flush()
+            subprocess.run(["wget", srim_url, "-O", srim_e_file], check=True)
         else:
-            print("SRIM installer already downloaded. Skipping download.")
+            print("SRIM installer found in assets folder. Skipping download."); sys.stdout.flush()
 
         # Extract SRIM
-        print("Extracting SRIM...")
-        subprocess.run(["7z", "x", srim_exe, f"-o{srim_dir}"], check=True)
-        # Remove the installer file after extraction to save space
-        if os.path.exists(srim_exe):
-            os.remove(srim_exe)
+        print("Extracting SRIM..." ); sys.stdout.flush()
+        print(srim_e_file)
+        print(srim_dir)
+        subprocess.run(["7z", "x", "-y", srim_e_file, f"-o{srim_dir}"], check=True)
         
         # Install Visual Basic runtime for Wine
-        print("Installing VB5 runtime for SRIM...")
         subprocess.run(["winetricks", "vb5run"], check=True)
 
         # Copy .ocx files

@@ -6,6 +6,7 @@ import random
 import subprocess
 import shutil
 import distutils.spawn
+import re
 
 from .core.utils import (
     check_input,
@@ -194,6 +195,13 @@ class TRIM(object):
             elif os.path.isfile(os.path.join(src_directory, 'SRIM Outputs', known_file)) and check_srim_output:
                 shutil.move(os.path.join(
                     src_directory, 'SRIM Outputs', known_file), dest_directory)
+        try:
+            # Ensure we only delete directories inside /tmp/
+            if src_directory.startswith("/tmp/"):
+                shutil.rmtree(src_directory)  # Delete the entire source directory
+                print(f"Deleted source directory: {src_directory}")
+        except Exception as e:
+            print(f"Warning: Could not delete {src_directory} - {e}")
 
     def run(self, srim_directory=DEFAULT_SRIM_DIRECTORY, unique_id = -1):
         """Run configured SRIM calculation in a process-specific directory.
@@ -246,39 +254,9 @@ class TRIM(object):
                 subprocess.check_call([str(os.path.join('.', 'TRIM.exe'))])
 
             os.chdir(current_directory)
-            return process_directory #Results(process_directory)  # Return results from the unique directory
+            return process_directory # Return the unique results directory
         finally:
             os.chdir(current_directory)  # Ensure we always return to the original directory
-
-    # def run(self, srim_directory=DEFAULT_SRIM_DIRECTORY):
-    #     """Run configured srim calculation
-
-    #     This method:
-    #      - writes the input file to ``<srim_directory>/TRIM.IN``
-    #      - launches ``<srim_directory>/TRIM.exe``. Uses ``wine`` if available (needed for linux and osx)
-
-    #     Parameters
-    #     ----------
-    #     srim_directory : :obj:`str`, optional
-    #         path to srim directory. ``SRIM.exe`` should be located in
-    #         this directory. Default ``/tmp/srim/`` will absolutely
-    #         need to change for windows.
-    #     """
-    #     current_directory = os.getcwd()
-    #     try:
-    #         os.chdir(srim_directory)
-    #         self._write_input_files()
-    #         # Make sure compatible with Windows, OSX, and Linux
-    #         # If 'wine' command exists use it to launch TRIM
-    #         if distutils.spawn.find_executable("wine"):
-    #             subprocess.check_call(['wine', str(os.path.join('.', 'TRIM.exe'))])
-    #         else:
-    #             subprocess.check_call([str(os.path.join('.', 'TRIM.exe'))])
-    #         os.chdir(current_directory)
-    #         return Results(srim_directory)
-    #     finally:
-    #         os.chdir(current_directory)
-
 
 class SRSettings(object):
     """ SR Settings
