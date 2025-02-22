@@ -195,34 +195,89 @@ class TRIM(object):
                 shutil.move(os.path.join(
                     src_directory, 'SRIM Outputs', known_file), dest_directory)
 
-    def run(self, srim_directory=DEFAULT_SRIM_DIRECTORY):
-        """Run configured srim calculation
+    def run(self, srim_directory=DEFAULT_SRIM_DIRECTORY, unique_id = -1):
+        """Run configured SRIM calculation in a process-specific directory.
 
         This method:
-         - writes the input file to ``<srim_directory>/TRIM.IN``
-         - launches ``<srim_directory>/TRIM.exe``. Uses ``wine`` if available (needed for linux and osx)
+        - Creates a **unique** working directory per process using `unique_id`
+        - Writes the input file to `<srim_directory>/TRIM.IN`
+        - Launches `<srim_directory>/TRIM.exe`
+        - Ensures execution is isolated for parallel processing
 
         Parameters
         ----------
-        srim_directory : :obj:`str`, optional
-            path to srim directory. ``SRIM.exe`` should be located in
-            this directory. Default ``/tmp/srim/`` will absolutely
-            need to change for windows.
+        srim_directory : str
+            Path to the SRIM installation directory containing `TRIM.exe`.
+        unique_id : int
+            Unique identifier (such as `os.getpid()`) for isolating execution.
         """
+        if unique_id == -1:
+            process_directory = srim_directory
+        else:
+            process_directory = os.path.join("/tmp/", f"trim_{unique_id}")
+
+            # Copy necessary SRIM/TRIM files into the temp directory
+            # Create a process-specific working directory
+            os.makedirs(process_directory, exist_ok=True)
+            # Find all .exe, .dat, and .ocx files in the SRIM directory
+            for file_name in os.listdir(srim_directory):
+                if file_name.lower().endswith((".exe", ".dat", ".ocx")):
+                    src_path = os.path.join(srim_directory, file_name)
+                    dst_path = os.path.join(process_directory, file_name)
+                    shutil.copy(src_path, dst_path)
+
+            folders_to_copy=["SRIM Outputs", "SRIM Restore", "Data"]
+            for folder in folders_to_copy:
+                src_folder = os.path.join(srim_directory, folder)
+                dst_folder = os.path.join(process_directory, folder)
+                if os.path.exists(src_folder) and os.path.isdir(src_folder):
+                    shutil.copytree(src_folder, dst_folder, dirs_exist_ok=True)
+
         current_directory = os.getcwd()
         try:
-            os.chdir(srim_directory)
-            self._write_input_files()
-            # Make sure compatible with Windows, OSX, and Linux
-            # If 'wine' command exists use it to launch TRIM
-            if distutils.spawn.find_executable("wine"):
+            # Change working directory to the process-specific folder
+            os.chdir(process_directory)
+            self._write_input_files()  # Ensure input files are written in this directory
+
+            # Execute TRIM.exe in this directory
+            if distutils.spawn.find_executable("wine"):  # Use Wine for Linux/macOS
                 subprocess.check_call(['wine', str(os.path.join('.', 'TRIM.exe'))])
             else:
                 subprocess.check_call([str(os.path.join('.', 'TRIM.exe'))])
+
             os.chdir(current_directory)
-            return Results(srim_directory)
+            return process_directory #Results(process_directory)  # Return results from the unique directory
         finally:
-            os.chdir(current_directory)
+            os.chdir(current_directory)  # Ensure we always return to the original directory
+
+    # def run(self, srim_directory=DEFAULT_SRIM_DIRECTORY):
+    #     """Run configured srim calculation
+
+    #     This method:
+    #      - writes the input file to ``<srim_directory>/TRIM.IN``
+    #      - launches ``<srim_directory>/TRIM.exe``. Uses ``wine`` if available (needed for linux and osx)
+
+    #     Parameters
+    #     ----------
+    #     srim_directory : :obj:`str`, optional
+    #         path to srim directory. ``SRIM.exe`` should be located in
+    #         this directory. Default ``/tmp/srim/`` will absolutely
+    #         need to change for windows.
+    #     """
+    #     current_directory = os.getcwd()
+    #     try:
+    #         os.chdir(srim_directory)
+    #         self._write_input_files()
+    #         # Make sure compatible with Windows, OSX, and Linux
+    #         # If 'wine' command exists use it to launch TRIM
+    #         if distutils.spawn.find_executable("wine"):
+    #             subprocess.check_call(['wine', str(os.path.join('.', 'TRIM.exe'))])
+    #         else:
+    #             subprocess.check_call([str(os.path.join('.', 'TRIM.exe'))])
+    #         os.chdir(current_directory)
+    #         return Results(srim_directory)
+    #     finally:
+    #         os.chdir(current_directory)
 
 
 class SRSettings(object):
