@@ -59,7 +59,10 @@ class CustomInstallCommand(install):
         # Extract SRIM
         print("Extracting SRIM...")
         subprocess.run(["7z", "x", srim_exe, f"-o{srim_dir}"], check=True)
-
+        # Remove the installer file after extraction to save space
+        if os.path.exists(srim_exe):
+            os.remove(srim_exe)
+        
         # Install Visual Basic runtime for Wine
         print("Installing VB5 runtime for SRIM...")
         subprocess.run(["winetricks", "vb5run"], check=True)
