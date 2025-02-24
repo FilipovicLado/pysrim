@@ -203,23 +203,8 @@ class TRIM(object):
         except Exception as e:
             print(f"Warning: Could not delete {src_directory} - {e}")
 
-    def run(self, srim_directory=DEFAULT_SRIM_DIRECTORY, unique_id = -1):
-        """Run configured SRIM calculation in a process-specific directory.
-
-        This method:
-        - Creates a **unique** working directory per process using `unique_id`
-        - Writes the input file to `<srim_directory>/TRIM.IN`
-        - Launches `<srim_directory>/TRIM.exe`
-        - Ensures execution is isolated for parallel processing
-
-        Parameters
-        ----------
-        srim_directory : str
-            Path to the SRIM installation directory containing `TRIM.exe`.
-        unique_id : int
-            Unique identifier (such as `os.getpid()`) for isolating execution.
-        """
-        if unique_id == -1:
+    def run(self, srim_directory=DEFAULT_SRIM_DIRECTORY, unique_id = 1):
+        if unique_id < 2:
             process_directory = srim_directory
         else:
             process_directory = os.path.join("/tmp/", f"trim_{unique_id}")
@@ -247,9 +232,36 @@ class TRIM(object):
             os.chdir(process_directory)
             self._write_input_files()  # Ensure input files are written in this directory
 
+       
             # Execute TRIM.exe in this directory
             if distutils.spawn.find_executable("wine"):  # Use Wine for Linux/macOS
-                subprocess.check_call(['wine', str(os.path.join('.', 'TRIM.exe'))])
+                # Set a process-specific Wine environment
+                env = os.environ.copy()
+                env["WINEPREFIX"] = os.path.expanduser("~/.wine")
+                env["WINEDEBUG"] = "-all"  # Suppress Wine debug messages
+                env["TMP"] = process_directory
+                env["TEMP"] = process_directory
+                env["TMPDIR"] = process_directory
+
+                # **Optimize Wine Initialization**
+                wine_initialized_flag = os.path.join(env["WINEPREFIX"], ".wine_initialized")
+                
+                if not os.path.exists(wine_initialized_flag):
+                    print("Initializing Wine")
+                    subprocess.run(["wine", "wineboot", "-u"], env=env, stderr=subprocess.DEVNULL)
+                    open(wine_initialized_flag, 'w').close()  # Create a flag file so Wine is not reset again
+
+                process = subprocess.Popen(
+                    ['wine', str(os.path.join('.', 'TRIM.exe'))],
+                    cwd=process_directory,
+                    # env=env,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                stdout, stderr = process.communicate()
+                # print("STDERR:", stderr.decode("utf-8", errors="ignore"))  # Debugging only
+
+                # subprocess.check_call(['wine', str(os.path.join('.', 'TRIM.exe'))])
             else:
                 subprocess.check_call([str(os.path.join('.', 'TRIM.exe'))])
 

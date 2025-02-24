@@ -1,0 +1,41 @@
+====== pysrim run =======
+        SRIM-2013.00
+=======================================
+      Data  of  TRIM  Calculation      
+=======================================
+====== TRIM Calc.= Al(150 keV) ==> None(  1 um) ==============================
+------------------------------------------------------------------------------
+Ion = Al (13)   Ion Mass= 026.9815
+Energy  = 1500000.E-04 keV
+Ion Angle to Surface = 4 degrees
+============= TARGET MATERIAL ======================================
+  Layer # 1 - None
+  Layer # 1 - Bottom Depth=     1.E+04 A
+  Layer # 1- Density = 9.642E22 atoms/cm3 = 3.21 g/cm3
+  Layer # 1- Si = 50   Atomic Percent = 70.0 Mass Percent
+  Layer # 1-  C = 50   Atomic Percent = 29.9 Mass Percent
+====================================================================
+Target energies for target atom = Si
+    Displacement = 35 eV, Binding = 4.8 eV, Surface = 3 eV
+Target energies for target atom =  C
+    Displacement = 20 eV, Binding = 7.1 eV, Surface = 3 eV
+====================================================================
+Depth Range of Tabulated Data=  000000.E+00  -  100000.E-01  Angstroms
+====================================================================
+Total Ions calculated =  000100
+Average Range         =   15571.E-01 Angstroms
+Average Straggling    =   47162.E-02 Angstroms
+Average Vacancy/Ion   =   10563.E-01
+====================================================================
+Total Backscattered Ions=  0 
+Total Transmitted Ions  =  0 
+====================================================================
+See files SRIM Outputs\*.txt for tables :
+   TDATA.txt    -- Details of the calculation.
+   RANGE.txt    -- Final distribution of Ions/Recoils
+   VACANCY.txt  -- Distribution of Vacancies
+   IONIZ.txt    -- Distribution of Ionization
+   PHONON.txt   -- Distribution of Phonons
+   E2RECOIL.txt -- Energy transferred to recoils
+   NOVAC.txt    -- Replacement collisions
+   LATERAL.txt  -- Lateral Spread of Ions
