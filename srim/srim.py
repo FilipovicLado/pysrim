@@ -147,7 +147,7 @@ class RunTRIM(object):
             # Ensure we only delete directories inside /tmp/
             if src_directory.startswith("/tmp/"):
                 shutil.rmtree(src_directory)  # Delete the entire source directory
-                print(f"Deleted source directory: {src_directory}")
+                # print(f"Deleted source directory: {src_directory}")
         except Exception as e:
             print(f"Warning: Could not delete {src_directory} - {e}")
 
@@ -258,14 +258,14 @@ class TRIM(object):
     def run_fragment(i, num_ions, ion, target, srim_dir, path, trim_settings):
         """Runs TRIM for a single ion fragment in a separate process, passing a unique process ID."""
         process_id = os.getpid()  # Generate unique ID based on process ID
-        print(f"Process {process_id} running fragment {i}: {num_ions} ions for {ion.symbol}")
+        # print(f"Process {process_id} running fragment {i}: {num_ions} ions for {ion.symbol}")
 
         trim_settings = trim_settings or {'calculation': 2}
 
         # Run TRIM, passing the SRIM executable directory and unique process ID
         trim = RunTRIM(target, ion, number_ions=num_ions, **trim_settings)
         results = trim.run(srim_dir, process_id)  # Pass both
-        print(f"Process {process_id} finished fragment {i}")
+        # print(f"Process {process_id} finished fragment {i}")
 
         # Find a unique save directory and copy results
         save_directory = TRIM.find_folder(path)
@@ -299,14 +299,14 @@ class TRIM(object):
 
         for ion in self.ions:  # Loop over each ion separately
             symbol_path = os.path.join(self.output_dir, ion['identifier'])  # Define unique output path
-            print("symbol_path = ", symbol_path)
+            # print("symbol_path = ", symbol_path)
 
             if threads < 2:  # Run in serial if only one thread
                 # trim_settings = self.settings or {'calculation': 2}
                 self.run_process(self.number_ions, Ion(**ion), self.target, self.srim_dir, symbol_path, self.settings)
             else:
                 # Generate fragment arguments
-                pool_args = [(i, self.number_ions, Ion(**ion), self.target, self.srim_dir, symbol_path, self.settings) 
+                pool_args = [(i, self.step_size, Ion(**ion), self.target, self.srim_dir, symbol_path, self.settings) 
                             for i, num_ions in enumerate(self.fragment(self.step_size, self.number_ions))]
 
                 num_workers = max(min(min(len(pool_args), threads), os.cpu_count()), 2)  # Limit to requested threads
