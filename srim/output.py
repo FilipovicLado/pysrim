@@ -661,7 +661,83 @@ class Collision:
     def __len__(self):
         return len(self._ion_index) - 1
     
+    import re
+
     def write_mmonca(self, output_file):
+        """Write the Collision data to a MMonCa file"""
+        with open(self.filename, 'r', encoding='latin-1') as f:
+            lines = f.readlines()
+        
+        mmonca_lines = []
+        cascade_active = False
+        defects = {}  # Dictionary to store defects at the same location
+
+        for line in lines:
+            # Detect start of a new cascade
+            if 'Summary of Above Cascade ==>' in line:
+                if defects:  # Process the stored defects before starting a new cascade
+                    mmonca_lines.append("# New cascade")
+                    for (x, y, z), (vac, repl) in defects.items():
+                        if z < 1e-6:
+                            if vac > 0 and repl > 0:
+                                continue
+                            if vac > 0 and repl < 1:
+                                for _ in range(vac):
+                                    # Sputtered atom leaves a vacancy
+                                    mmonca_lines.append(f"V {x:.3f} {y:.3f} 0.000") 
+                                    continue # No interstitial
+                        elif repl > 0:  # If there's a replacement, we only generate interstitials
+                            for _ in range(vac):
+                                mmonca_lines.append(f"I {x:.3f} {y:.3f} {z:.3f}")
+                                continue # No vacancy
+                        else:  # If there's no replacement, generate both V and I
+                            for _ in range(vac):
+                                mmonca_lines.append(f"I {x:.3f} {y:.3f} {z:.3f}")
+                                mmonca_lines.append(f"V {x:.3f} {y:.3f} {z:.3f}")
+                    defects.clear()  # Clear the dictionary for the new cascade
+                    cascade_active = True
+                    continue
+            
+            # Match lines containing defect information
+            match = re.match(r'Û\s*(\d+)\s+\d+\s+[\d.E+-]+\s+([\d.E+-]+)\s+([\d.E+-]+)\s+([\d.E+-]+)\s+(\d+)\s+(\d+)', line)
+            if match:
+                x, y, z, vacancies, replacements = map(float, match.groups()[1:])
+                
+                # Convert from Angstroms to nanometers (divide by 10)
+                x, y, z = round(x / 10, 3), round(y / 10, 3), round(z / 10, 3)
+                
+                # Store defects in a dictionary with coordinates as the key
+                if (x, y, z) in defects:
+                    defects[(x, y, z)][0] += int(vacancies)  # Add vacancies
+                    defects[(x, y, z)][1] += int(replacements)  # Add replacements
+                else:
+                    defects[(x, y, z)] = [int(vacancies), int(replacements)]
+        
+        # # Process any remaining defects at the end of the file
+        # if defects:
+        #     for (x, y, z), (vac, repl) in defects.items():
+        #         if z < 0 and vac == 1 and repl == 1:
+        #             continue  # Ignore sputtered atoms that were replaced
+        #         if z < 0:
+        #             for _ in range(vac):
+        #                 mmonca_lines.append(f"V {x:.3f} {y:.3f} 0.000")  # Sputtered atom leaves a vacancy
+        #             continue
+        #         if repl > 0:
+        #             for _ in range(vac):
+        #                 mmonca_lines.append(f"I {x:.3f} {y:.3f} {z:.3f}")  # Only generate interstitials
+        #             continue
+        #         else:
+        #             for _ in range(vac):
+        #                 mmonca_lines.append(f"I {x:.3f} {y:.3f} {z:.3f}")
+        #                 mmonca_lines.append(f"V {x:.3f} {y:.3f} {z:.3f}")
+
+        # Save to file
+        with open(output_file, 'w') as f:
+            f.write("\n".join(mmonca_lines))
+        
+        print(f"Conversion complete. MMonCa file saved as {output_file}")
+
+    def write_mmonca2(self, output_file):
         """Write the Collision data to a MMonCa file"""
         with open(self.filename, 'r', encoding='latin-1') as f:
             lines = f.readlines()
@@ -672,8 +748,6 @@ class Collision:
         for line in lines:
             # Detect start of a new cascade
             if '<== Start of New Cascade' in line:
-                # if cascade_active:
-                    # mmonca_lines.append("\n")  # Separate cascades
                 mmonca_lines.append("# New cascade")
                 cascade_active = True
                 continue
