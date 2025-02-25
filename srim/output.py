@@ -226,7 +226,6 @@ class Vacancy(SRIM_Output):
         """Vacancies [Vacancies/(Angstrom-Ion)] produced of element in layer"""
         return self._vacancies
 
-
 class NoVacancy(SRIM_Output):
     """ ``NOVAC.txt`` Table of Replacement Collisions
 
@@ -661,6 +660,45 @@ class Collision:
 
     def __len__(self):
         return len(self._ion_index) - 1
+    
+    def write_mmonca(self, output_file):
+        """Write the Collision data to a MMonCa file"""
+        with open(self.filename, 'r', encoding='latin-1') as f:
+            lines = f.readlines()
+        
+        mmonca_lines = []
+        cascade_active = False
+
+        for line in lines:
+            # Detect start of a new cascade
+            if '<== Start of New Cascade' in line:
+                # if cascade_active:
+                    # mmonca_lines.append("\n")  # Separate cascades
+                mmonca_lines.append("# New cascade")
+                cascade_active = True
+                continue
+            
+            # Match lines containing defect information
+            match = re.match(r'\Û\s*(\d+)\s+\d+\s+[\d.E+-]+\s+([\d.E+-]+)\s+([\d.E+-]+)\s+([\d.E+-]+)\s+(\d+)\s+(\d+)', line)
+            if match:
+                x, y, z, vacancies, replacements = map(float, match.groups()[1:])
+                
+                # Convert from Angstroms to nanometers (divide by 10)
+                x, y, z = x / 10, y / 10, z / 10
+                
+                # Vacancies become interstitials (I) if they are not replaced
+                for _ in range(int(vacancies) - int(replacements)):
+                    mmonca_lines.append(f"I {x:.3f} {y:.3f} {z:.3f}")
+                
+                # Assign vacancies (V) directly from Vac
+                for _ in range(int(vacancies)):
+                    mmonca_lines.append(f"V {x:.3f} {y:.3f} {z:.3f}")
+        
+        # Save to file
+        with open(output_file, 'w') as f:
+            f.write("\n".join(mmonca_lines))
+        
+        print(f"Conversion complete. MMonCa file saved as {output_file}")
 
 
 def buffered_findall(filename, string, start=0):

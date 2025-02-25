@@ -126,7 +126,7 @@ class RunTRIM(object):
             'LATERAL.txt', 'NOVAC.txt', 'RANGE.txt', 'VACANCY.txt',
             'COLLISON.txt', 'BACKSCAT.txt', 'SPUTTER.txt',
             'RANGE_3D.txt', 'TRANSMIT.txt', 'TRIMOUT.txt',
-            'TDATA.txt'
+            'TDATA.txt', 'INTERSTITIAL.txt'
         }
 
         if not os.path.isdir(src_directory):
@@ -286,37 +286,44 @@ class TRIM(object):
         RunTRIM.copy_output_files(results, save_directory)
         print(f"Process saved to: {save_directory}")
 
-    def apply(self, threads = None):
-        """Runs TRIM calculations in parallel for each ion, ensuring unique execution paths.
+    def apply(self, threads=None):
+        """Runs TRIM calculations in parallel, interleaving ions to optimize parallelism.
 
         Parameters
         ----------
-        number_of_threads : int
-            Number of parallel threads/processes to use.
+        threads : int, optional
+            Number of parallel threads/processes to use. Defaults to CPU count.
         """
         if threads is None:
             threads = os.cpu_count()
 
-        for ion in self.ions:  # Loop over each ion separately
-            symbol_path = os.path.join(self.output_dir, ion['identifier'])  # Define unique output path
-            # print("symbol_path = ", symbol_path)
-
-            if threads < 2:  # Run in serial if only one thread
-                # trim_settings = self.settings or {'calculation': 2}
+        if threads < 2:  # Run in serial if only one thread
+            for ion in self.ions:
+                symbol_path = os.path.join(self.output_dir, ion['identifier'])  # Unique output path
                 self.run_process(self.number_ions, Ion(**ion), self.target, self.srim_dir, symbol_path, self.settings)
-            else:
-                # Generate fragment arguments
-                pool_args = [(i, self.step_size, Ion(**ion), self.target, self.srim_dir, symbol_path, self.settings) 
-                            for i, num_ions in enumerate(self.fragment(self.step_size, self.number_ions))]
+                print(f"Completed TRIM simulation for ion: {ion['identifier']}")
+            return
 
-                num_workers = max(min(min(len(pool_args), threads), os.cpu_count()), 2)  # Limit to requested threads
+        # Interleave fragments from all ions
+        pool_args = []
+        for ion in self.ions:
+            symbol_path = os.path.join(self.output_dir, ion['identifier'])
+            ion_obj = Ion(**ion)
 
-                # Run parallel TRIM calculations for this ion
-                with multiprocessing.Pool(processes=num_workers) as pool:
-                    pool.starmap(TRIM.run_fragment, pool_args)  # Run fragments in parallel
+            # Generate fragment arguments and interleave them
+            pool_args.extend(
+                (i, self.step_size, ion_obj, self.target, self.srim_dir, symbol_path, self.settings)
+                for i, num_ions in enumerate(self.fragment(self.step_size, self.number_ions))
+            )
 
-            print(f"Completed TRIM simulation for ion: {ion['identifier']}")
+        num_workers = max(min(len(pool_args), threads), 2)  # Limit to requested threads
 
+        # Run parallel TRIM calculations with mixed ions
+        with multiprocessing.Pool(processes=num_workers) as pool:
+            pool.starmap(TRIM.run_fragment, pool_args)
+
+        print("Completed TRIM simulations for all ions.")
+        
 class SRSettings(object):
     def __init__(self, **args):
         self._settings = {

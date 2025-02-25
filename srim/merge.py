@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import re
+import shutil
 
 from srim.core.ion import Element
 
@@ -54,7 +55,7 @@ class CASCADES:
             if not files:
                 continue  # Skip if no files found for this ion type
 
-            output_file = os.path.join(self.data_directory, ion_symbol, f"{ion_symbol}_COLLISON.txt")
+            output_file = os.path.join(self.data_directory, ion_symbol, "COLLISON.txt")
             # print(f"Merging {len(files)} files for {ion_symbol} into {output_file}")
 
             self._merge_collision_files(output_file, *files)
@@ -71,8 +72,14 @@ class CASCADES:
 
     def _merge_collision_files(self, output_file, *files):
         """ Merges multiple COLLISON.txt files while keeping correct ion numbering. """
-        if len(files) < 2:
-            print("Error: At least two files are required to merge.")
+        if len(files) < 1:
+            print("Error: No files provided.")
+            return
+        
+        if len(files) == 1:
+            # Only one file: just copy it to the output location
+            shutil.copy(files[0], output_file)
+            # print(f"Only one file provided. Copied {files[0]} to {output_file}.")
             return
 
         history_marker = b"==========================  COLLISION HISTORY"
@@ -81,13 +88,16 @@ class CASCADES:
         base_file = files[0]
         additional_files = files[1:]
 
-        # Copy the first file completely to the output
-        with open(base_file, "rb") as f1, open(output_file, "wb") as out_f:
-            copying = True
-            for line in f1:
-                out_f.write(line)
-                if history_marker in line:
-                    copying = False  # Stop copying headers
+        # Simply copy the first file to the output
+        shutil.copy(base_file, output_file)
+
+        # # Copy the first file completely to the output
+        # with open(base_file, "rb") as f1, open(output_file, "wb") as out_f:
+        #     copying = True
+        #     for line in f1:
+        #         out_f.write(line)
+        #         if history_marker in line:
+        #             copying = False  # Stop copying headers
 
         # Get the last ion number from the first file
         current_ion_number = self._get_total_ions(base_file)
@@ -134,8 +144,8 @@ class CASCADES:
 
             element_obj = Element(ion_symbol)
 
-            merged_file = os.path.join(self.data_directory, ion_symbol, f"{ion_symbol}_COLLISON.txt")
-            npy_path = os.path.join(self.data_directory, ion_symbol, f"{ion_symbol}_collision.dat.npy")
+            merged_file = os.path.join(self.data_directory, ion_symbol, "COLLISON.txt")
+            npy_path = os.path.join(self.data_directory, ion_symbol, "collision.dat.npy")
 
             if not os.path.exists(merged_file):
                 print(f"Warning: Merged file {merged_file} not found for {ion_symbol}. Skipping...")
