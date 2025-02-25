@@ -158,11 +158,10 @@ class CASCADES:
 
             self.data[ion_symbol] = {
                 "total_ions": self.total_ions[ion_symbol],
-                "collisions": np_positions/10
+                "collisions": np_positions / 10
             }
 
         return self.data
-    
     def print_summary(self):
         sort_by_mass = lambda e1: Element(e1).mass
         # print summary information

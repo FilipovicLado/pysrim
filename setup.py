@@ -115,7 +115,7 @@ setup(
         'srim': ['data/*.yaml'],
     },
     setup_requires=['pytest-runner', 'setuptools>=38.6.0'],  # >38.6.0 needed for markdown README.md
-    install_requires=['pyyaml', 'numpy>=1.10.0'],
+    install_requires=['pyyaml', 'numpy>=1.10.0', 'filelock'],
     tests_require=['pytest', 'pytest-mock', 'pytest-cov'],
     cmdclass={"install": CustomInstallCommand},  # Hook the custom install command
 )
